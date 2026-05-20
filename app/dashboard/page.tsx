@@ -1,17 +1,21 @@
+import { prisma } from '@/lib/prisma';
 import AddProjectForm from './AddProjectForm';
-import { deleteProject } from '../actions/projects'; // Import de l'action
+import { deleteProject } from '../actions/projects';
 
 export default async function DashboardPage() {
-  const res = await fetch('http://localhost:3000/projects', { cache: 'no-store' });
-  const projects = await res.json();
+  // Lecture DIRECTE depuis la base de données SQLite via Prisma
+  const projects = await prisma.project.findMany({
+    orderBy: { createdAt: 'desc' }
+  });
 
   return (
     <div style={{ padding: '2rem' }}>
       <h1>Dashboard</h1>
+      <p>{projects.length} projets</p>
       <AddProjectForm />
       
       <ul style={{ listStyle: 'none', padding: 0 }}>
-        {projects.map((p: any) => (
+        {projects.map((p) => (
           <li key={p.id} style={{ 
             display: 'flex', 
             gap: 12, 

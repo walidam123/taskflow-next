@@ -1,39 +1,47 @@
-interface Project {
-  id: string;
-  name: string;
-  color: string;
+import { prisma } from '@/lib/prisma';
+import { notFound } from 'next/navigation';
+
+// 5.1 Fonction generateStaticParams pour le SSG
+export async function generateStaticParams() {
+  const projects = await prisma.project.findMany();
+  
+  // On retourne un tableau d'objets contenant l'ID converti en string
+  return projects.map((p) => ({
+    id: String(p.id),
+  }));
 }
-interface Props {
-  params: Promise<{ id: string }>;
-}
-export default async function ProjectPage({ params }: Props) {
-  const { id } = await params;
-  const res = await fetch(`http://localhost:4000/projects/${id}`, {
-    cache: "no-store",
+
+export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
+  const { id } = params;
+
+  // Récupération directe du projet avec Prisma
+  const project = await prisma.project.findUnique({
+    where: { id: Number(id) }
   });
-  if (!res.ok) {
-    return <div style={{ padding: "2rem" }}>Projet non trouvé</div>;
+
+  // Si le projet n'existe pas en BDD, on renvoie vers la page 404
+  if (!project) {
+    notFound();
   }
-  const project: Project = await res.json();
+
   return (
-    <div style={{ padding: "2rem" }}>
-      {" "}
-      <h1>
-        {" "}
-        <span
-          style={{
-            display: "inline-block",
-            width: 16,
-            height: 16,
-            borderRadius: "50%",
-            background: project.color,
-            marginRight: 8,
-          }}
-        />{" "}
-        {project.name}{" "}
-      </h1>{" "}
-      <p>ID : {project.id}</p>{" "}
-      <a href="/dashboard">← Retour au Dashboard</a>{" "}
+    <div style={{ padding: '2rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span style={{ 
+          width: 16, 
+          height: 16, 
+          borderRadius: '50%', 
+          background: project.color, 
+          display: 'inline-block' 
+        }} />
+        <h1>{project.name}</h1>
+      </div>
+      <p style={{ color: '#666' }}>ID du projet : {project.id}</p>
+      <p style={{ color: '#888' }}>Créé le : {new Date(project.createdAt).toLocaleDateString()}</p>
+      
+      <a href="/dashboard" style={{ color: '#1B8C3E', textDecoration: 'none' }}>
+        ← Retour au Dashboard
+      </a>
     </div>
   );
 }

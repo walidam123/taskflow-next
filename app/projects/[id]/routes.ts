@@ -1,51 +1,41 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import { prisma } from '@/lib/prisma';
 
-const DB_PATH = path.join(process.cwd(), 'db.json');
-
-function readDB() {
-  return JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
-}
-
-function writeDB(data: any) {
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
-}
-
-// GET : Récupérer un projet spécifique
+// GET : Récupérer un projet unique par son ID
 export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const db = readDB();
-  const project = db.projects.find((p: any) => p.id === params.id);
+  const { id } = params;
   
-  if (!project) return NextResponse.json({ error: 'Projet non trouvé' }, { status: 404 });
+  const project = await prisma.project.findUnique({
+    where: { id: Number(id) }
+  });
+
+  if (!project) {
+    return NextResponse.json({ error: 'Projet introuvable' }, { status: 404 });
+  }
+
   return NextResponse.json(project);
 }
 
-// PUT : Modifier un projet
+// PUT : Modifier un projet (nom et couleur)
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
-  const body = await request.json();
-  const db = readDB();
-  const index = db.projects.findIndex((p: any) => p.id === params.id);
+  const { id } = params;
+  const { name, color } = await request.json();
 
-  if (index === -1) return NextResponse.json({ error: 'Projet non trouvé' }, { status: 404 });
+  const updatedProject = await prisma.project.update({
+    where: { id: Number(id) },
+    data: { name, color }
+  });
 
-  db.projects[index] = { ...db.projects[index], ...body };
-  writeDB(db);
-
-  return NextResponse.json(db.projects[index]);
+  return NextResponse.json(updatedProject);
 }
 
 // DELETE : Supprimer un projet
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
-  const db = readDB();
-  const filteredProjects = db.projects.filter((p: any) => p.id !== params.id);
+  const { id } = params;
 
-  if (db.projects.length === filteredProjects.length) {
-    return NextResponse.json({ error: 'Projet non trouvé' }, { status: 404 });
-  }
+  await prisma.project.delete({
+    where: { id: Number(id) }
+  });
 
-  db.projects = filteredProjects;
-  writeDB(db);
-
-  return NextResponse.json({ message: 'Projet supprimé' });
+  return NextResponse.json({ message: 'Projet supprime avec succes' });
 }
